@@ -12,6 +12,7 @@
  */
 
 import { weightedIndex } from './weighted';
+import { PAGE_HTML } from './page';
 
 export interface Env {
   AI: any;
@@ -22,6 +23,12 @@ const SYSTEM_PROMPT_WEIGHTS = [80, 20];
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
+		const { pathname } = new URL(request.url);
+
+		if (pathname !== '/api/thought') {
+			if (pathname !== '/') return new Response('Not found', { status: 404 });
+			return new Response(PAGE_HTML, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+		}
 
 		const models = [
 			'@cf/mistralai/mistral-small-3.1-24b-instruct',
