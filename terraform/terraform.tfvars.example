@@ -1,0 +1,2 @@
+# Set cloudflare_api_token via TF_VAR_cloudflare_api_token or a secret manager.
+cloudflare_account_id = "your-cloudflare-account-id"
