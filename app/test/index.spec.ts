@@ -1,29 +1,34 @@
-import {
-	env,
-	createExecutionContext,
-	waitOnExecutionContext,
-	SELF,
-} from "cloudflare:test";
+import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { describe, it, expect } from "vitest";
 import worker from "../src/index";
 
-// For now, you'll need to do something like this to get a correctly-typed
-// `Request` to pass to `worker.fetch()`.
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-describe("Hello World worker", () => {
-	it("responds with Hello World! (unit style)", async () => {
-		const request = new IncomingRequest("http://example.com");
-		// Create an empty context to pass to `worker.fetch()`.
-		const ctx = createExecutionContext();
-		const response = await worker.fetch(request, env, ctx);
-		// Wait for all `Promise`s passed to `ctx.waitUntil()` to settle before running test assertions
-		await waitOnExecutionContext(ctx);
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
+const run = async (path: string, testEnv: any = env) => {
+	const ctx = createExecutionContext();
+	const response = await worker.fetch(new IncomingRequest(`http://example.com${path}`), testEnv, ctx);
+	await waitOnExecutionContext(ctx);
+	return response;
+};
+
+describe("VibeThoughts worker", () => {
+	it("serves the HTML UI at /", async () => {
+		const response = await run("/");
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("text/html");
+		const body = await response.text();
+		expect(body).toContain("VibeThoughts");
+		expect(body).toContain("/api/thought");
 	});
 
-	it("responds with Hello World! (integration style)", async () => {
-		const response = await SELF.fetch("https://example.com");
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
+	it("returns the AI response at /api/thought", async () => {
+		const fakeEnv = { AI: { run: async () => ({ response: "Be still." }) } };
+		const response = await run("/api/thought", fakeEnv);
+		expect(await response.json()).toEqual({ response: "Be still." });
+	});
+
+	it("returns 404 for unknown paths", async () => {
+		const response = await run("/nope");
+		expect(response.status).toBe(404);
 	});
 });
