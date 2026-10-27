@@ -44,6 +44,10 @@ export const PAGE_HTML = `<!doctype html>
 		}
 		button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
 		button:disabled { opacity: 0.5; cursor: wait; }
+		@media (max-width: 40rem) {
+			html, body { height: 100%; overflow: hidden; }
+			body { min-height: 0; }
+		}
 	</style>
 </head>
 <body>
