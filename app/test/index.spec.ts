@@ -19,6 +19,7 @@ describe("VibeThoughts worker", () => {
 		const body = await response.text();
 		expect(body).toContain("VibeThoughts");
 		expect(body).toContain("/api/thought");
+		expect(body).toMatch(/@media \(max-width: 40rem\)[\s\S]*?html,\s*body\s*\{[^}]*overflow:\s*hidden;/);
 	});
 
 	it("returns the AI response at /api/thought", async () => {
