@@ -8,3 +8,8 @@ variable "cloudflare_api_token" {
   sensitive   = true
   description = "Cloudflare API token with appropriate permissions"
 }
+
+variable "cloudflare_d1_database_name" {
+  type        = string
+  description = "Cloudflare D1 Database name"
+}

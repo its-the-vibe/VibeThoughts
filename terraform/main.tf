@@ -27,6 +27,11 @@ resource "cloudflare_worker" "my_worker" {
   }
 }
 
+resource "cloudflare_d1_database" "my_database" {
+  account_id = var.cloudflare_account_id
+  name       = var.cloudflare_d1_database_name
+}
+
 resource "cloudflare_worker_version" "my_worker_version" {
   account_id         = var.cloudflare_account_id
   worker_id          = cloudflare_worker.my_worker.id
@@ -45,6 +50,11 @@ resource "cloudflare_worker_version" "my_worker_version" {
     {
       name = "AI"
       type = "ai"
+    },
+    {
+      name        = "DB"
+      type        = "d1"
+      database_id = cloudflare_d1_database.my_database.id
     }
   ]
 }
