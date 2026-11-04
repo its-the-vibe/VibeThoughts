@@ -54,7 +54,7 @@ resource "cloudflare_worker_version" "my_worker_version" {
     {
       name        = "DB"
       type        = "d1"
-      database_id = cloudflare_d1_database.my_database.id
+      id = cloudflare_d1_database.my_database.id
     }
   ]
 }
