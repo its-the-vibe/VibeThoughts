@@ -68,3 +68,14 @@ resource "cloudflare_workers_deployment" "my_worker_deployment" {
     version_id = cloudflare_worker_version.my_worker_version.id
   }]
 }
+
+resource "cloudflare_workers_cron_trigger" "my_worker_cron" {
+  account_id  = var.cloudflare_account_id
+  script_name = cloudflare_worker.my_worker.name
+
+  schedules = [{
+    cron = "0 7 * * *"
+  }]
+
+  depends_on = [cloudflare_workers_deployment.my_worker_deployment]
+}
