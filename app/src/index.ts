@@ -16,10 +16,56 @@ import { PAGE_HTML } from './page';
 
 export interface Env {
   AI: any;
+  DB: D1Database;
 }
 
 // Relative weights, one per system prompt (wise, chaotic)
 const SYSTEM_PROMPT_WEIGHTS = [80, 20];
+
+async function generateAndStoreThought(env: Env): Promise<void> {
+	const models = [
+		'@cf/mistralai/mistral-small-3.1-24b-instruct',
+		'@cf/meta/llama-3.2-3b-instruct',
+	];
+
+	// random model selection
+	const model = models[Math.floor(Math.random() * models.length)];
+
+	const themes: string[] = [
+		"deep focus",
+		"creativity",
+		"patience",
+		"letting go"
+	];
+
+	// random theme selection
+	const theme = themes[Math.floor(Math.random() * themes.length)];
+
+	const userPrompt: string = "Give me today's thought for the day.";
+
+	const systemPrompts = [
+		`You are a thoughtful, wise, and concise philosophical guide. Your job is to deliver a single, impactful "Thought for the Day." \n- Keep the output brief (1 to 3 sentences maximum).\n- Avoid cheesy clichés or generic motivational quotes.\n- Focus on practical wisdom, perspective, mindfulness, or quiet curiosity.\nTheme focus: ${theme}`,
+		"You are a brilliant, slightly chaotic, and deeply cynical-yet-insightful digital companion. Your job is to give a \"Thought for the Day\" that subverts traditional boring motivational quotes with sharp wit, quirky metaphors, or absurdly practical life observations.\n- Keep it punchy and surprising.\n- No boring corporate jargon or tired clichés.\n- Max 3 sentences."
+	];
+
+	// weighted random system prompt selection
+	const systemPrompt = systemPrompts[weightedIndex(SYSTEM_PROMPT_WEIGHTS)];
+
+	const messages = [
+		{ role: "system", content: systemPrompt },
+		{ role: "user", content: userPrompt },
+	];
+
+	console.log(`Selected model: ${model}, Selected theme: ${theme}, SystemPrompt: ${systemPrompt}`);
+
+	const response = await env.AI.run(model, { messages });
+	const thought = typeof response?.response === 'string' ? response.response.trim() : '';
+	if (!thought) throw new Error('AI returned an empty thought');
+
+	await env.DB.prepare('INSERT INTO thoughts (model, prompt, thought, response) VALUES (?, ?, ?, ?)')
+		.bind(model, JSON.stringify(messages), thought, JSON.stringify(response))
+		.run();
+}
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
@@ -30,67 +76,28 @@ export default {
 			return new Response(PAGE_HTML, { headers: { 'content-type': 'text/html; charset=utf-8' } });
 		}
 
-		const models = [
-			'@cf/mistralai/mistral-small-3.1-24b-instruct',
-			'@cf/meta/llama-3.2-3b-instruct',
-		];
-
-		// random model selection
-		const modelIndex = Math.floor(Math.random() * models.length);
-
-
-		const themes: string[] = [
-			"deep focus",
-			"creativity",
-			"patience",
-			"letting go"
-		];
-
-		// random theme selection
-		const themeIndex = Math.floor(Math.random() * themes.length);
-
-		const userPrompt: string = "Give me today's thought for the day.";
-
-		const systemPrompts = [
-			`You are a thoughtful, wise, and concise philosophical guide. Your job is to deliver a single, impactful "Thought for the Day." \n- Keep the output brief (1 to 3 sentences maximum).\n- Avoid cheesy clichés or generic motivational quotes.\n- Focus on practical wisdom, perspective, mindfulness, or quiet curiosity.\nTheme focus: ${themes[themeIndex]}`,
-			"You are a brilliant, slightly chaotic, and deeply cynical-yet-insightful digital companion. Your job is to give a \"Thought for the Day\" that subverts traditional boring motivational quotes with sharp wit, quirky metaphors, or absurdly practical life observations.\n- Keep it punchy and surprising.\n- No boring corporate jargon or tired clichés.\n- Max 3 sentences."
-		];
-
-		// weighted random system prompt selection
-		const systemPromptIndex = weightedIndex(SYSTEM_PROMPT_WEIGHTS);
-
-		const messages = [
-			{ 
-				role: "system", 
-				content: systemPrompts[systemPromptIndex],
-			},
-			{
-				role: "user",
-				content: userPrompt,
-			},
-		];
-
-		console.log(`Selected model: ${models[modelIndex]}, Selected theme: ${themes[themeIndex]}, SystemPrompt: ${systemPrompts[systemPromptIndex]}`);
-
-		const response = await env.AI.run(models[modelIndex], {
-			messages
-		});
-
-	    return Response.json(response);		
+		try {
+			const row = await env.DB.prepare('SELECT id, created_at, model, thought FROM thoughts ORDER BY id DESC LIMIT 1').first<{
+				id: number;
+				created_at: string;
+				model: string;
+				thought: string;
+			}>();
+			if (!row) return Response.json({ error: 'No thought available yet' }, { status: 404 });
+			return Response.json({ id: row.id, created_at: row.created_at, model: row.model, response: row.thought });
+		} catch (err) {
+			console.error('Failed to retrieve latest thought', err);
+			return Response.json({ error: 'Failed to retrieve thought' }, { status: 500 });
+		}
 	},
 
-	// The scheduled handler is invoked at the interval set in our wrangler.jsonc's
-	// [[triggers]] configuration.
+	// The scheduled handler is invoked at the interval set by the cron trigger.
 	async scheduled(event, env, ctx): Promise<void> {
-		// A Cron Trigger can make requests to other endpoints on the Internet,
-		// publish to a Queue, query a D1 Database, and much more.
-		//
-		// We'll keep it simple and make an API call to a Cloudflare API:
-		let resp = await fetch('https://api.cloudflare.com/client/v4/ips');
-		let wasSuccessful = resp.ok ? 'success' : 'fail';
-
-		// You could store this result in KV, write to a D1 Database, or publish to a Queue.
-		// In this template, we'll just log the result:
-		console.log(`trigger fired at ${event.cron}: ${wasSuccessful}`);
+		try {
+			await generateAndStoreThought(env);
+			console.log(`trigger fired at ${event.cron}: success`);
+		} catch (err) {
+			console.error(`trigger fired at ${event.cron}: fail`, err);
+		}
 	},
 } satisfies ExportedHandler<Env>;
