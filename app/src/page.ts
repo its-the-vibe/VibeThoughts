@@ -3,7 +3,7 @@ export const PAGE_HTML = `<!doctype html>
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>VibeThoughts</title>
+	<title>Thought for the Day</title>
 	<style>
 		* { box-sizing: border-box; }
 		body {
@@ -32,18 +32,6 @@ export const PAGE_HTML = `<!doctype html>
 		.date { margin: 0 0 2rem; opacity: 0.75; font-size: 0.9rem; }
 		blockquote { margin: 0; font-size: clamp(1.15rem, 4vw, 1.6rem); line-height: 1.6; font-style: italic; }
 		blockquote.error { color: #fecaca; }
-		button {
-			margin-top: 2rem;
-			padding: 0.6rem 1.4rem;
-			font: inherit;
-			color: inherit;
-			background: transparent;
-			border: 1px solid rgba(255, 255, 255, 0.6);
-			border-radius: 999px;
-			cursor: pointer;
-		}
-		button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
-		button:disabled { opacity: 0.5; cursor: wait; }
 		@media (max-width: 40rem) {
 			html, body { height: 100%; overflow: hidden; }
 			body { min-height: 0; }
@@ -52,14 +40,12 @@ export const PAGE_HTML = `<!doctype html>
 </head>
 <body>
 	<main>
-		<h1>VibeThoughts</h1>
+		<h1>Thought for the Day</h1>
 		<p class="date" id="date"></p>
 		<blockquote id="thought" aria-live="polite">Gathering a thought…</blockquote>
-		<button id="refresh" type="button" disabled>Another thought</button>
 	</main>
 	<script>
 		const thought = document.getElementById('thought');
-		const button = document.getElementById('refresh');
 		document.getElementById('date').textContent = new Date().toLocaleDateString(undefined, {
 			weekday: 'long',
 			year: 'numeric',
@@ -67,9 +53,6 @@ export const PAGE_HTML = `<!doctype html>
 			day: 'numeric',
 		});
 		async function load() {
-			button.disabled = true;
-			thought.className = '';
-			thought.textContent = 'Gathering a thought…';
 			try {
 				const res = await fetch('/api/thought');
 				if (!res.ok) throw new Error('Request failed: ' + res.status);
@@ -78,12 +61,9 @@ export const PAGE_HTML = `<!doctype html>
 				thought.textContent = data.response.trim();
 			} catch (err) {
 				thought.className = 'error';
-				thought.textContent = 'Could not fetch a thought right now. Please try again.';
-			} finally {
-				button.disabled = false;
+				thought.textContent = 'Could not fetch a thought right now. Please try again later.';
 			}
 		}
-		button.addEventListener('click', load);
 		load();
 	</script>
 </body>
