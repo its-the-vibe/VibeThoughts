@@ -52,9 +52,9 @@ resource "cloudflare_worker_version" "my_worker_version" {
       type = "ai"
     },
     {
-      name        = "DB"
-      type        = "d1"
-      id = cloudflare_d1_database.my_database.id
+      name = "DB"
+      type = "d1"
+      id   = cloudflare_d1_database.my_database.id
     }
   ]
 }
@@ -78,4 +78,11 @@ resource "cloudflare_workers_cron_trigger" "my_worker_cron" {
   }]
 
   depends_on = [cloudflare_workers_deployment.my_worker_deployment]
+}
+
+resource "cloudflare_workers_custom_domain" "worker_domain" {
+  account_id = var.cloudflare_account_id
+  zone_id    = var.cloudflare_zone_id
+  hostname   = var.cloudflare_worker_hostname
+  service    = cloudflare_worker.my_worker.name
 }

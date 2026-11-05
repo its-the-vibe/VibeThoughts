@@ -1,3 +1,5 @@
 # Set cloudflare_api_token via TF_VAR_cloudflare_api_token or a secret manager.
 cloudflare_account_id = "your-cloudflare-account-id"
 cloudflare_d1_database_name = "my-sqlite-db"
+cloudflare_zone_id = "your-cloudflare-zone-id"
+cloudflare_worker_hostname = "www.example.com"

@@ -3,6 +3,16 @@ variable "cloudflare_account_id" {
   description = "Cloudflare Account ID"
 }
 
+variable "cloudflare_zone_id" {
+  type        = string
+  description = "Cloudflare Zone ID"
+}
+
+variable "cloudflare_worker_hostname" {
+  type        = string
+  description = "Cloudflare Worker custom domain hostname"
+}
+
 variable "cloudflare_api_token" {
   type        = string
   sensitive   = true
