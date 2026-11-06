@@ -30,6 +30,16 @@ describe("VibeThoughts worker", () => {
 		expect(await response.json()).toEqual({ id: 3, created_at: row.created_at, model: "m", response: "Be still." });
 	});
 
+	it("limits the API thought to 212 characters", async () => {
+		const row = { id: 3, created_at: "2026-11-04 00:00:00", model: "m", thought: "a".repeat(300) };
+		const fakeEnv = { DB: { prepare: () => ({ first: async () => row }) } };
+		const response = await run("/api/thought", fakeEnv);
+		const body = await response.json() as { response: string };
+		expect(body.response).toHaveLength(212);
+		expect(body.response.endsWith("…")).toBe(true);
+		expect(row.thought).toHaveLength(300);
+	});
+
 	it("returns 500 when the database fails", async () => {
 		const fakeEnv = { DB: { prepare: () => ({ first: async () => { throw new Error("boom"); } }) } };
 		const response = await run("/api/thought", fakeEnv);
@@ -45,6 +55,16 @@ describe("VibeThoughts worker", () => {
 		await worker.scheduled({ cron: "* * * * *" } as any, fakeEnv as any, createExecutionContext());
 		expect(calls).toHaveLength(1);
 		expect(calls[0][2]).toBe("Be still.");
+	});
+
+	it("stores the full generated thought", async () => {
+		const calls: any[] = [];
+		const fakeEnv = {
+			AI: { run: async () => ({ response: "a".repeat(300) }) },
+			DB: { prepare: () => ({ bind: (...args: any[]) => ({ run: async () => { calls.push(args); } }) }) },
+		};
+		await worker.scheduled({ cron: "* * * * *" } as any, fakeEnv as any, createExecutionContext());
+		expect(calls[0][2]).toHaveLength(300);
 	});
 
 	it("returns 404 for unknown paths", async () => {
